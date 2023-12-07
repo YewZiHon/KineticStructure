@@ -23,34 +23,22 @@ void setup() {
     for(uint8_t j=0; j<24;j++){
       pinMode(outputs[i][j],OUTPUT);
       digitalWrite(outputs[i][j],1);
-      Serial.println(outputs[i][j]);
     }
   }
 
-  cli();
-
-  TCCR1A = 0;// set entire TCCR1A register to 0
-  TCCR1B = 0x05;// same for TCCR1B
-  TCNT4  = 0;//initialize counter value to 0
-  TIMSK1=0x01;
-
-  cli();//allow interrupts
-
   pinMode(13,OUTPUT);
-  Serial.print("end");
 }
 
 void loop() {
   if (Serial.available()){
     deserializeJson(doc, Serial);
-    if (doc["m"] && doc["p"]){//motor number and set power
-      if (doc["p"]<MAXPWM && doc["p"]<MAXPWM){
-        uint8_t motorNumber = doc["m"];
-        power[motorNumber]=doc["p"];
-        Serial.print(motorNumber);
-        Serial.print(" ");
-        Serial.print(power[motorNumber]);
-      }
+    serializeJson(doc, Serial);
+    if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
+      uint8_t motorNumber = doc["m"];
+      power[motorNumber]=doc["p"];
+      Serial.print(motorNumber);
+      Serial.print(" ");
+      Serial.println(power[motorNumber]);
     }
   }
   //Serial.println(pwmPhaseCount);
@@ -59,6 +47,20 @@ void loop() {
     pwmPhaseCount=0;
     digitalWrite(13,toggle);
     toggle = !toggle;
-    //Serial.println("led");
+    for(uint8_t i=0; i<2;i++){
+      for(uint8_t j=0; j<24;j++){
+        digitalWrite(outputs[i][j],0);
+      }
+    }
+  }
+  for(uint8_t j=0; j<24;j++){
+    if (power[j]!=0){
+      if (power[j]<0 && (power[j]*-1)==pwmPhaseCount){
+        digitalWrite(outputs[0][j],1);
+      }
+      if (power[j]>0 && power[j]==pwmPhaseCount){
+        digitalWrite(outputs[1][j],1);
+      }
+    }
   }
 }
