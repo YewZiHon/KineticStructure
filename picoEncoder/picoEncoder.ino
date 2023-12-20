@@ -1,11 +1,7 @@
-#include "LittleFS.h"
 #include "ArduinoJson.h"
-//  #include <SoftwareSerial.h>
 
 volatile int32_t position[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 volatile int8_t direction[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-File file;
 
 StaticJsonDocument<8192> doc;
 
@@ -14,9 +10,6 @@ const uint32_t STARTTIME= 5000;//5s wait
 const uint32_t TIMESTEP= 10 ;
 uint32_t stepcounter = 0;
 
-//serial
-SerialPIO serial(27, SerialPIO::NOPIN);
-//SoftwareSerial mySerial (28, txPin);
 
   void f0(){
     const int8_t encoder=0;
@@ -235,49 +228,8 @@ SerialPIO serial(27, SerialPIO::NOPIN);
     }
   }
 
-
-void homing(){
-  #define TIMEOUT 12000
-  //send signal to start all motors
-  serial.print("{\"m\":1,\"p\":-255}");
-  //wait a bit
-  delay(1000);
-  //check for motors to stop or timeout
-  uint8_t reached[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  uint32_t time[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  int32_t lastposition[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  //reset position couter and set time
-  for(uint8_t i =0; i<24;i++){
-    position[i]=0;
-    time[i]=millis();
-    direction[i]=1;
-  }
-  while(millis()<TIMEOUT){
-    for(uint8_t i =0; i<24;i++){
-      if (position[i]!=lastposition[i]){
-        time[i]=millis();
-        lastposition[i]=position[i];
-      }
-    }
-    Serial.println(position[1]);
-    delay(1);
-    for (uint8_t i =0; i<24;i++){
-      if (i==1){
-        Serial.print('a');
-        Serial.println(millis()-time[i]);
-      }
-      if (millis()-time[i]>1000 && reached[i]!=1){
-        reached[i]=1;
-        serial.print("{\"m\":1,\"p\":0}");
-        Serial.print("reached");
-      }
-    }
-  }
-}
-
 void setup() {
-  pinMode(27,OUTPUT_12MA);
-  serial.begin(115200);
+
 //setup pins
   for(uint8_t i =0; i<24;i++){
     pinMode(i,INPUT_PULLDOWN);
@@ -309,38 +261,11 @@ void setup() {
   attachInterrupt(22, f22, RISING);
   attachInterrupt(23, f23, RISING);
   direction[0]=1;
-//mount little fs and init
-  LittleFS.begin();
-  if(LittleFS.exists("0.json")){
-    file=LittleFS.open("0.json", "r");
-  }
-  else if(LittleFS.exists("1.json")){
-    file=LittleFS.open("1.json", "r");
-  }
-  else if(LittleFS.exists("2.json")){
-    file=LittleFS.open("2.json", "r");
-  }
-  else if(LittleFS.exists("3.json")){
-    file=LittleFS.open("3.json", "r");
-  }
-  else if(LittleFS.exists("4.json")){
-    file=LittleFS.open("4.json", "r");
-  }
-  else if(LittleFS.exists("5.json")){
-    file=LittleFS.open("5.json", "r");
-  }
-  else{
-    Serial.println("Error opening file, aborting");
-    while(1);
-  }
+
 
 //other stuff
   Serial.println("initDone");
 
-//homing
-  homing();
-  Serial.print("homing done");
-  while(1);
 }
 
 void loop() {
