@@ -32,7 +32,10 @@ void setup() {
 void loop() {
   if (Serial.available()){
     deserializeJson(doc, Serial);
-    serializeJson(doc, Serial);
+    if (doc.containsKey("i")){
+        deserializeJson(doc, "{\"i\":\"M0\"}");
+        serializeJson(doc, Serial);
+    }
     if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
       uint8_t motorNumber = doc["m"];
       power[motorNumber]=doc["p"];
@@ -44,9 +47,9 @@ void loop() {
           power[motorNumber]=uint16_t(MAXPWM)+power[motorNumber]-1;
         }
       }
-      Serial.print(motorNumber);
-      Serial.print(" ");
-      Serial.println(power[motorNumber]);
+      //Serial.print(motorNumber);
+      //Serial.print(" ");
+      //Serial.println(power[motorNumber]);
     }
   }
   //Serial.println(pwmPhaseCount);
