@@ -168,6 +168,7 @@ void loop() {
     if (doc.containsKey("i")){
         deserializeJson(doc, "{\"i\":\"E0\"}");
         serializeJson(doc, Serial);
+        Serial.print('\n');
       }
     if (doc.containsKey("r")){
       for(uint8_t i =0; i<12;i++){
@@ -191,7 +192,7 @@ void loop() {
   doc["B"]=position[11];
   serializeJson(doc, Serial);
   Serial.print('\n');
-  delay(10);
+  delay(50);
   
 
 

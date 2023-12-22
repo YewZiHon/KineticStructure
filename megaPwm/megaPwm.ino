@@ -35,6 +35,7 @@ void loop() {
     if (doc.containsKey("i")){
         deserializeJson(doc, "{\"i\":\"M0\"}");
         serializeJson(doc, Serial);
+        Serial.print('\n');
     }
     if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
       uint8_t motorNumber = doc["m"];
