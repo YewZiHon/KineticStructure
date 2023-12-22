@@ -8,16 +8,16 @@ def controllerStart():
     threadHandle.start()
 
 def motorMap(motornum):
-    col=motornum%6#controller
-    row=motornum//6#motor
+    row=motornum%24#controller
+    col=motornum//24#motor
     return col,row
 
 def revMotorMap(col,row):
-    return col*6+row
+    return col*24+row
 
 def encoderMap(encnum):
-    col=encnum%12
-    row=encnum//12
+    row=encnum%12
+    col=encnum//12
     return col,row
 
 def revEncoderMap(col,row):
@@ -28,6 +28,7 @@ def getEncoders(encoders):
     for encoderDriver in encoders:
         if encoderDriver:
             array+=encoderDriver.position
+            print(encoderDriver.position)
         else:
             array+=[0,0,0,0,0,0,0,0,0,0,0,0]
     return array
@@ -76,13 +77,18 @@ def controllerLoop():
         #print(newpositions)
         currtime=time.time()
         for i in range(144):
+            if reached[i]:
+                continue
             if newpositions[i]!=lastPosition[i]:
                 lastTime[i]=currtime
-                newpositions[i]=lastPosition[i]
-            if currtime - lastTime[i]>100:
+                lastPosition[i]=newpositions[i]
+            if i==0:
+                print(newpositions[i],lastPosition[i])
+            if currtime - lastTime[i]>0.100:
                 con,mot = motorMap(i)
                 reached[i]=1
                 data = {'m':mot,'p':0}
+                
                 if motorsControllers[con]:
                     print(i,"reached")
                     motorsControllers[con].println(data)
