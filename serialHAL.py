@@ -72,6 +72,7 @@ class SerialHal():
     def println(self,data):
         if self.connection.out_waiting>200:
             return
+        data = str(data)
         data = data.encode('utf-8')
         self.connection.write(data)
         #print("send")

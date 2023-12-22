@@ -8,12 +8,12 @@ def controllerStart():
     threadHandle.start()
 
 def motorMap(motornum):
-    col=motornum%24
-    row=motornum//24
+    col=motornum%6#controller
+    row=motornum//6#motor
     return col,row
 
 def revMotorMap(col,row):
-    return col*24+row
+    return col*6+row
 
 def encoderMap(encnum):
     col=encnum%12
@@ -23,8 +23,17 @@ def encoderMap(encnum):
 def revEncoderMap(col,row):
     return col*12+row
 
+def getEncoders(encoders):
+    array=[]
+    for encoderDriver in encoders:
+        if encoderDriver:
+            array+=encoderDriver.position
+        else:
+            array+=[0,0,0,0,0,0,0,0,0,0,0,0]
+    return array
 
 def controllerLoop():
+    #setup
     ports = serial_ports()
     print(ports)  
     motorsControllers=[None,None,None,None,None,None]
@@ -42,6 +51,45 @@ def controllerLoop():
         motorObject[i].output_limits = (-255, 255)
     print(motorsControllers)
     print(encoders)
+    #homing
+    for i in range(144):#start all motors
+        con, mot = motorMap(i)
+        data = {'m':mot,'p':127}
+        if motorsControllers[con]:
+            motorsControllers[con].println(data)
+    time.sleep(1)
+
+    #init accumulators
+    startTime=time.time()
+    lastTime=[startTime for i in range(144)]
+    lastPosition=[0 for i in range(144)]
+    reached=[0 for i in range(144)]
+    
+    while True:
+        if time.time()-startTime>20:
+            print('timeout')
+            break
+        if 0 not in reached:
+            break
+
+        newpositions = getEncoders(encoders)
+        #print(newpositions)
+        currtime=time.time()
+        for i in range(144):
+            if newpositions[i]!=lastPosition[i]:
+                lastTime[i]=currtime
+                newpositions[i]=lastPosition[i]
+            if currtime - lastTime[i]>100:
+                con,mot = motorMap(i)
+                reached[i]=1
+                data = {'m':mot,'p':0}
+                if motorsControllers[con]:
+                    print(i,"reached")
+                    motorsControllers[con].println(data)
+
+
+
+    #control loop
     while True:
         break
 
