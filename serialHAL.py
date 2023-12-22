@@ -53,14 +53,19 @@ class SerialHal():
         if self.mode =='E':
             self.threadHandle = threading.Thread(target=self.dataReader, args=(),daemon=True)
             self.threadHandle.start()
+
     def dataReader(self):
         expected=['0','1','2','3','4','5','6','7','8','9','A','B']
         while True:
             index=0
             newdata = self.read()
             for i in expected:
-                self.position[index]=newdata[i]
+                try:
+                    self.position[index]=newdata[i]
+                except:
+                    pass
                 index+=1
+                
 
 
 
@@ -69,22 +74,14 @@ class SerialHal():
             return
         data = data.encode('utf-8')
         self.connection.write(data)
-        print("send")
+        #print("send")
     
     def read(self):
         while True:
             data = self.connection.readline().decode("utf-8")
             try:
                 dict_json = json.loads(data)
-                print(dict_json)
+                #print(dict_json)
                 return dict_json
             except json.JSONDecodeError as e:
                 print("JSON:", e)
-
-ports = serial_ports()
-print(ports)  
-for port in ports:
-    ser = SerialHal(port)
-
-time.sleep(10)
-exit()
