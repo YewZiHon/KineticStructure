@@ -74,9 +74,11 @@ class SerialHal():
             print("outbuff cap")
             return
         data = str(data)
+        data=data.replace(" ","")
+        data=data.replace("'","\"")
         data = data.encode('utf-8')
         self.connection.write(data)
-        #print("send")
+        print(data)
     
     def read(self):
         while True:

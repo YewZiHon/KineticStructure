@@ -45,23 +45,19 @@ void loop() {
       strncat(input,&i,1);
       if(i=='}'){
         inputState=2;
-        Serial.println(input);
+        //Serial.println(input);
       }
     }
     if (inputState==2){
-      Serial.println("des");
-      DeserializationError err = deserializeJson(doc, input);
-        Serial.println(err.c_str());
-      serializeJson(doc, input);
-
+      deserializeJson(doc, input);
       inputState=0;
 
       if (doc.containsKey("i")){
-          deserializeJson(doc, "{\"i\":\"M0\"}");
-          serializeJson(doc, Serial);
-          Serial.print('\n');
+        deserializeJson(doc, "{\"i\":\"M0\"}");
+        serializeJson(doc, Serial);
+        Serial.print('\n');
       }
-      if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
+      if (doc.containsKey("p")){//motor number and set power
         uint8_t motorNumber = doc["m"];
         power[motorNumber]=doc["p"];
         if (power[motorNumber]!=0){
@@ -98,7 +94,6 @@ void loop() {
       }
     }
   }
-  
 }
 /*
 {"m":0,"p":255}{"m":1,"p":255}{"m":2,"p":255}{"m":3,"p":255}{"m":4,"p":255}{"m":5,"p":255}{"m":6,"p":255}{"m":7,"p":255}{"m":8,"p":255}{"m":9,"p":255}{"m":10,"p":255}{"m":11,"p":255}{"m":12,"p":255}

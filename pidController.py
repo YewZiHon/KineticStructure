@@ -47,9 +47,9 @@ def controllerLoop():
             motorsControllers[ser.add]=ser
     motorObject=[]
     for i in range(144):
-        motorObject.append(PID(0.3, 0.0, 0.0, setpoint=0))
+        motorObject.append(PID(0.5, 0.0, 0.3, setpoint=0))
         motorObject[i].sample_time = 0.1
-        motorObject[i].output_limits = (-255, 255)
+        motorObject[i].output_limits = (-127, 127)
     print(motorsControllers)
     print(encoders)
     #homing
@@ -103,7 +103,7 @@ def controllerLoop():
 
 
     #control loop
-    motorObject[0].setpoint = 3000
+    motorObject[0].setpoint = 300
     lastval=[0 for i in range(144)]
     while True:
         encoderValues = getEncoders(encoders)
@@ -113,7 +113,7 @@ def controllerLoop():
             con,mot = motorMap(i)
             data = {'m':mot,'p':output}
             if motorsControllers[con] and lastval[i] != output:
-                print(lastval[i],output)
+                #print(output)
                 lastval[i]=output
                 motorsControllers[con].println(data)
             #pid.setpoint = 3000
