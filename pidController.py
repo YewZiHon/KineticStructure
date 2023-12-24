@@ -30,9 +30,9 @@ def getEncoders(encoders):
             array+=encoderDriver.position
             print(encoderDriver.position)
         else:
-            array+=[0,0,0,0,0,0,0,0,0,0,0,0]
+            array+=[1,1,1,1,1,1,1,1,1,1,1,1]
     return array
-
+  
 def controllerLoop():
     #setup
     ports = serial_ports()
@@ -58,7 +58,7 @@ def controllerLoop():
         data = {'m':mot,'p':127}
         if motorsControllers[con]:
             motorsControllers[con].println(data)
-    time.sleep(1)
+    time.sleep(0.5)
 
     #init accumulators
     startTime=time.time()
@@ -71,6 +71,7 @@ def controllerLoop():
             print('timeout')
             break
         if 0 not in reached:
+            print("All reached home")
             break
 
         newpositions = getEncoders(encoders)
@@ -82,8 +83,6 @@ def controllerLoop():
             if newpositions[i]!=lastPosition[i]:
                 lastTime[i]=currtime
                 lastPosition[i]=newpositions[i]
-            if i==0:
-                print(newpositions[i],lastPosition[i])
             if currtime - lastTime[i]>0.100:
                 con,mot = motorMap(i)
                 reached[i]=1
@@ -92,7 +91,15 @@ def controllerLoop():
                 if motorsControllers[con]:
                     print(i,"reached")
                     motorsControllers[con].println(data)
-
+    print("homing Done")
+    time.sleep(0.5)
+    #reset home position
+    for encoder in encoders:
+        if encoder:
+            data = {'r':0}
+            encoder.println(data)
+    time.sleep(1)
+    print(getEncoders(encoders))
 
 
     #control loop
