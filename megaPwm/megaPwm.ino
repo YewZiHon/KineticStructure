@@ -14,7 +14,9 @@ volatile int16_t power[24]={
 bool toggle=0;
 uint16_t pwmPhaseCount=0;
 
-StaticJsonDocument<256> doc;
+StaticJsonDocument<128> doc;
+char input[64];
+uint8_t inputState=0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -30,30 +32,50 @@ void setup() {
 }
 
 void loop() {
+    
   if (Serial.available()){
-    deserializeJson(doc, Serial);
-    if (doc.containsKey("i")){
-        deserializeJson(doc, "{\"i\":\"M0\"}");
-        serializeJson(doc, Serial);
-        Serial.print('\n');
+    char i=Serial.read();
+    if(i=='{'){
+      inputState=1;
+      memset(input,0,30);
+      strcpy(input,"{");
+
     }
-    if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
-      uint8_t motorNumber = doc["m"];
-      power[motorNumber]=doc["p"];
-      if (power[motorNumber]!=0){
-        if (power[motorNumber]>0){
-          power[motorNumber]=uint16_t(MAXPWM)-power[motorNumber]+1;
-        }
-        else{
-          power[motorNumber]=uint16_t(MAXPWM)+power[motorNumber]-1;
+    else if(inputState==1){
+      strncat(input,&i,1);
+      if(i=='}'){
+        inputState=2;
+        Serial.println(input);
+      }
+    }
+    if (inputState==2){
+      Serial.println("des");
+      DeserializationError err = deserializeJson(doc, input);
+        Serial.println(err.c_str());
+      serializeJson(doc, input);
+
+      inputState=0;
+
+      if (doc.containsKey("i")){
+          deserializeJson(doc, "{\"i\":\"M0\"}");
+          serializeJson(doc, Serial);
+          Serial.print('\n');
+      }
+      if (doc.containsKey("m") && doc.containsKey("p")){//motor number and set power
+        uint8_t motorNumber = doc["m"];
+        power[motorNumber]=doc["p"];
+        if (power[motorNumber]!=0){
+          if (power[motorNumber]>0){
+            power[motorNumber]=uint16_t(MAXPWM)-power[motorNumber]+1;
+          }
+          else{
+            power[motorNumber]=uint16_t(MAXPWM)+power[motorNumber]-1;
+          }
         }
       }
-      //Serial.print(motorNumber);
-      //Serial.print(" ");
-      //Serial.println(power[motorNumber]);
     }
   }
-  //Serial.println(pwmPhaseCount);
+  
   pwmPhaseCount++;
   if (pwmPhaseCount>=MAXPWM){
     pwmPhaseCount=0;
@@ -65,6 +87,7 @@ void loop() {
       }
     }
   }
+  
   for(uint8_t j=0; j<24;j++){
     if (power[j]!=0){
       if (power[j]<0 && (power[j]*-1)==pwmPhaseCount){
@@ -75,6 +98,7 @@ void loop() {
       }
     }
   }
+  
 }
 /*
 {"m":0,"p":255}{"m":1,"p":255}{"m":2,"p":255}{"m":3,"p":255}{"m":4,"p":255}{"m":5,"p":255}{"m":6,"p":255}{"m":7,"p":255}{"m":8,"p":255}{"m":9,"p":255}{"m":10,"p":255}{"m":11,"p":255}{"m":12,"p":255}

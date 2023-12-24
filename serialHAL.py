@@ -70,7 +70,8 @@ class SerialHal():
 
 
     def println(self,data):
-        if self.connection.out_waiting>200:
+        if self.connection.out_waiting>1:
+            print("outbuff cap")
             return
         data = str(data)
         data = data.encode('utf-8')
@@ -80,6 +81,9 @@ class SerialHal():
     def read(self):
         while True:
             data = self.connection.readline().decode("utf-8")
+            if self.connection.in_waiting>1:
+                print("inbuff cap")
+                self.connection.reset_input_buffer()
             try:
                 dict_json = json.loads(data)
                 #print(dict_json)
