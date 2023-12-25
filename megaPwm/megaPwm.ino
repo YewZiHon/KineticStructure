@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 
 const uint8_t outputs[2][24]={
-  {12,10,8,6,4,22,24,26,28,30,32,34 ,  A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0},
+  {12,10,8,6,4,22,24,26,28,30,32,34 , A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0,A0},
   {11,9, 7,5,3,23,25,27,29,31,33,35 , 46,47,48,49,50,51,52,53,A0,A0,A1,A2}
 };
 
@@ -18,7 +18,7 @@ StaticJsonDocument<128> doc;
 char input[64];
 uint8_t inputState=0;
 
-void setup() {
+void setup(){
   // put your setup code here, to run once:
   Serial.begin(115200);
   for(uint8_t i=0; i<2;i++){
@@ -31,8 +31,8 @@ void setup() {
   pinMode(13,OUTPUT);
 }
 
-void loop() {
-    
+void loop(){
+  
   if (Serial.available()){
     char i=Serial.read();
     if(i=='{'){
@@ -60,14 +60,16 @@ void loop() {
       if (doc.containsKey("p")){//motor number and set power
         uint8_t motorNumber = doc["m"];
         power[motorNumber]=doc["p"];
+        //power[motorNumber]-=255;
         if (power[motorNumber]!=0){
           if (power[motorNumber]>0){
             power[motorNumber]=uint16_t(MAXPWM)-power[motorNumber]+1;
           }
           else{
-            power[motorNumber]=uint16_t(MAXPWM)+power[motorNumber]-1;
+            power[motorNumber]=(uint16_t(MAXPWM)+power[motorNumber]+1)*-1;
           }
         }
+        Serial.println(power[motorNumber]);
       }
     }
   }

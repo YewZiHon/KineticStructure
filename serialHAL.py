@@ -65,14 +65,14 @@ class SerialHal():
                 except:
                     pass
                 index+=1
-                
-
-
 
     def println(self,data):
         if self.connection.out_waiting>1:
             print("outbuff cap")
             return
+        if "p" in data:
+            pass
+            #data["p"]+=255
         data = str(data)
         data=data.replace(" ","")
         data=data.replace("'","\"")
