@@ -35,7 +35,6 @@ class PhotoBoothApp:
         self.thread.start()
         # set a callback to handle when the window is closed
         self.root.wm_title("PyImageSearch PhotoBooth")
-        self.root.wm_protocol("WM_DELETE_WINDOW", self.onClose)
 
     def videoLoop(self):
 # DISCLAIMER:
@@ -78,17 +77,6 @@ class PhotoBoothApp:
         # save the file
         cv2.imwrite(p, self.frame.copy())
         print("[INFO] saved {}".format(filename))
-
-    def onClose(self):
-
-        # set the stop event, cleanup the camera, and allow the rest of
-        # the quit process to continue
-        print("[INFO] closing...")
-        self.stopEvent.set()
-        self.vs.stop()
-        self.root.quit()
-
-#PhotoBoothApp("rtsp://b03773d78e34.entrypoint.cloud.wowza.com:1935/app-4065XT4Z/80c76e59_stream1","test")
 
 vs = VideoStream("rtsp://b03773d78e34.entrypoint.cloud.wowza.com:1935/app-4065XT4Z/80c76e59_stream1").start()
 time.sleep(2.0)
