@@ -9,11 +9,22 @@ import cv2
 import os
 import sys
 import enum
+import potrace
+from svg_to_gcode.svg_parser import parse_file
+from svg_to_gcode.compiler import Compiler, interfaces
+
+
 
 state = enum.Enum('state', ['takePhoto', 'previewPhoto', 'gen', 'plot', 'paused'])
 
 if not os.path.isdir(sys.path[0]+"\\temp"):
     os.makedirs(sys.path[0]+"\\temp")
+if not os.path.isdir(sys.path[0]+"\\temp\\img"):
+    os.makedirs(sys.path[0]+"\\temp\\img")
+if not os.path.isdir(sys.path[0]+"\\temp\\dot"):
+    os.makedirs(sys.path[0]+"\\temp\\dot")
+if not os.path.isdir(sys.path[0]+"\\temp\\gcode"):
+    os.makedirs(sys.path[0]+"\\temp\\gcode")
 
 class plotter:
     def __init__(self, vs):
@@ -42,14 +53,13 @@ class plotter:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def startStream(self,_=None):
-        self.root.bind_all('<Escape>', None)
-        self.root.bind_all('<Enter>', None)
+        self.root.bind('<Escape>', None)
         self.btn1.pack_forget()
         self.btn2.pack_forget()
         self.state=state.takePhoto
         self.btn0 = tkinter.Button(self.root, text="Take A Photo (Space)",command=self.takeSnapshot)
         self.btn0.pack(anchor=tkinter.S)
-        self.root.bind_all('<space>', self.spaceHandle)
+        self.root.bind('<space>', self.spaceHandle)
 
         self.thread = threading.Thread(target=self.videoLoop, args=(), daemon=True)
         self.thread.start()
@@ -73,27 +83,118 @@ class plotter:
             self.panel.image = image
 
     def spaceHandle(self,_):
+
         self.takeSnapshot()
 
     def takeSnapshot(self):
-        self.root.bind_all('<space>', None)
-        self.filename = datetime.datetime.now().strftime("%dd%mm%Yy-%Hh%Mn%Ss")+".jpeg"
+        self.root.bind('<space>', None)
+        self.filename = datetime.datetime.now().strftime("%dd%mm%Yy-%Hh%Mn%Ss")
         # save the file
-        print("saving",sys.path[0]+"\\temp\\"+self.filename)
-        print(cv2.imwrite(sys.path[0]+"\\temp\\"+self.filename, self.frame.copy()))
+        print("saving",sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg")
+        print(cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg", self.frame))
         self.state=state.previewPhoto
         self.btn0.pack_forget()
         self.btn1 = tkinter.Button(self.root, text="Back(Esc)",command=self.startStream)
         self.btn1.pack(anchor=tkinter.SW, padx=10,pady=10)
-        self.btn2 = tkinter.Button(self.root, text="Continue(Enter)",command=self.genGcode)
+        print("bind1")
+        self.btn2 = tkinter.Button(self.root, text="Continue(Space)",command=self.genGcode)
         self.btn2.pack(anchor=tkinter.SE, padx=10,pady=10)
-        self.root.bind_all('<Escape>', self.startStream)
-        self.root.bind_all('<Enter>', self.genGcode)
+        self.root.bind('<Escape>', self.startStream)
+        print("bind2")
+        self.root.bind('<space>', self.genGcode)
         self.root.update()
         self.root.update_idletasks()
-  
+    
+    def preprocess(self):
+        image=cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg")
+        image=cv2.Canny(image,1,50)
+
+        image = image[0:800, 133:933]
+        cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg",image)
+
+        return
+
     def genGcode(self,_=None):
+        if self.state ==state.gen:
+            return
+        self.state=state.gen
+        self.root.bind('<Escape>', None)
+        self.root.bind('<space>', None)
+
         print("Gcode")
+
+        self.preprocess()
+
+        image = Image.open(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")
+
+        generating = Image.fromarray(cv2.imread(sys.path[0]+"\\generating.jpg"))
+        generating = ImageTk.PhotoImage(generating)
+        
+        self.panel.configure(image=generating)
+        self.panel.image = generating
+        self.panel.update_idletasks()
+
+        bm = potrace.Bitmap(image)
+        # bm.invert()
+        plist = bm.trace(
+            turdsize=0,
+            turnpolicy=potrace.POTRACE_TURNPOLICY_MINORITY,
+            alphamax=0.8,
+            opticurve=True,
+            opttolerance=0.1,
+        )
+        with open(sys.path[0]+"\\temp\\img\\"+self.filename+".svg", "w") as fp:
+            fp.write(
+                f'''<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{image.width}" height="{image.height}" viewBox="0 0 {image.width} {image.height}">''')
+            parts = []
+            for curve in plist:
+                fs = curve.start_point
+                parts.append(f"M{fs.x},{fs.y}")
+                for segment in curve.segments:
+                    if segment.is_corner:
+                        a = segment.c
+                        b = segment.end_point
+                        parts.append(f"L{a.x},{a.y}L{b.x},{b.y}")
+                    else:
+                        a = segment.c1
+                        b = segment.c2
+                        c = segment.end_point
+                        parts.append(f"C{a.x},{a.y} {b.x},{b.y} {c.x},{c.y}")
+                parts.append("z")
+            fp.write(f'<path stroke="black" fill="none" fill-rule="evenodd" d="{"".join(parts)}"/>')
+            fp.write("</svg>")
+
+        
+        preview = Image.fromarray(cv2.bitwise_not(cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")))
+        preview = ImageTk.PhotoImage(preview)
+        
+        self.panel.configure(image=preview)
+        self.panel.image = preview
+        self.panel.update_idletasks()
+
+        
+        class CustomInterface(interfaces.Gcode):
+            def __init__(self):
+                super().__init__()
+
+            # Override the laser_off method such that it also powers off the fan.
+            def laser_off(self):
+                return "G1 F10000 Z2"  # Turn off the fan + turn off the laser
+            
+            def set_laser_power(self, power):
+                return "G1 F10000 Z0"
+
+
+        gcode_compiler = Compiler(CustomInterface, movement_speed=10000, cutting_speed=3000, pass_depth=0)
+
+        curves = parse_file(sys.path[0]+"\\temp\\img\\"+self.filename+".svg") # Parse an svg file into geometric curves
+
+        gcode_compiler.append_curves(curves) 
+        gcode_compiler.compile_to_file(sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode", passes=1)
+        
+
+
+        print("Gen done")
 
     def on_closing(self):
         self.root.destroy()
