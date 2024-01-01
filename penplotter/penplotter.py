@@ -41,7 +41,7 @@ class plotter:
         self.root.wm_title("Plotter")
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def startStream(self):
+    def startStream(self,_=None):
         self.root.bind_all('<Escape>', None)
         self.root.bind_all('<Enter>', None)
         self.btn1.pack_forget()
@@ -91,8 +91,8 @@ class plotter:
         self.root.bind_all('<Enter>', self.genGcode)
         self.root.update()
         self.root.update_idletasks()
-
-    def genGcode(self):
+  
+    def genGcode(self,_=None):
         print("Gcode")
 
     def on_closing(self):

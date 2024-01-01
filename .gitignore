@@ -1,5 +1,6 @@
 /kineticEnv
 /penplotter/plotterenv
+/penplotter/temp
 # Prerequisites
 *.d
 
