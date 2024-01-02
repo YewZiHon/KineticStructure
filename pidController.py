@@ -25,12 +25,14 @@ def revEncoderMap(col,row):
 
 def getEncoders(encoders):
     array=[]
+    addr=[]
     for encoderDriver in encoders:
         if encoderDriver:
-            array+=encoderDriver.position
-            print(encoderDriver.position)
+            array.extend(encoderDriver.position)
         else:
-            array+=[1,1,1,1,1,1,1,1,1,1,1,1]
+            array.extend([1,1,1,1,1,1,1,1,1,1,1,1])
+        
+    
     return array
   
 def controllerLoop():
@@ -47,7 +49,7 @@ def controllerLoop():
             motorsControllers[ser.add]=ser
     motorObject=[]
     for i in range(144):
-        motorObject.append(PID(0.8, 0.0, 0.1, setpoint=0))
+        motorObject.append(PID(0.8, 0.0, 0.5, setpoint=300))
         motorObject[i].sample_time = 0.1
         motorObject[i].output_limits = (-255, 255)
     print(motorsControllers)
@@ -58,7 +60,7 @@ def controllerLoop():
         data = {'m':mot,'p':127}
         if motorsControllers[con]:
             motorsControllers[con].println(data)
-    time.sleep(0.5)
+    time.sleep(1.5)
 
     #init accumulators
     startTime=time.time()
@@ -92,7 +94,7 @@ def controllerLoop():
                     print(i,"reached")
                     motorsControllers[con].println(data)
     print("homing Done")
-    time.sleep(0.5)
+    time.sleep(1.5)
     #reset home position
     for encoder in encoders:
         if encoder:
@@ -103,10 +105,11 @@ def controllerLoop():
 
     #control loop
     #motorObject[1].setpoint = -300
-    motorObject[0].setpoint = 300
+    #motorObject[0].setpoint = 300
     lastval=[0 for i in range(144)]
     while True:
         encoderValues = getEncoders(encoders)
+        print("Encoder",encoderValues[:24])
         for i in range(144):
             #output = pid(current_value)
             output = round(motorObject[i](encoderValues[i]))
