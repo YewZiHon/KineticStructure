@@ -27,24 +27,32 @@ def serial_ports():
     return result
 
 class SerialHal():
-    readBuffer=[]
-    sendBufffer=[]
-    id=""
-    connection=None
-    mode=""
-    add=-1
-    position=[0,0,0,0,0,0,0,0,0,0,0,0]
-    threadHandle=None
+    
     def __init__(self, connectionport):
+        #vars
+        self.readBuffer=[]
+        self.sendBufffer=[]
+        self.id=""
+        self.connection=None
+        self.mode=""
+        self.add=-1
+        self.position=[0,0,0,0,0,0,0,0,0,0,0,0]
+        self.threadHandle=None
+        self.port=""
+
         #start connection
         self.connection = serial.Serial(port=connectionport, baudrate=115200,parity=serial.PARITY_NONE)
         time.sleep(1)
         self.connection.reset_input_buffer()
+        self.port=connectionport
 
         #get identity
         self.println('{"i":0}')
         identity = self.read()
-        identity = identity['i']
+        if 'i' in identity:
+            identity = identity['i']
+        else: 
+            print("-",identity,"-")
         self.id=identity
         self.mode=identity[0]
         self.add=int(identity[1:])
@@ -53,6 +61,7 @@ class SerialHal():
         if self.mode =='E':
             self.threadHandle = threading.Thread(target=self.dataReader, args=(),daemon=True)
             self.threadHandle.start()
+        print(connectionport,"done")
 
     def dataReader(self):
         expected=['0','1','2','3','4','5','6','7','8','9','A','B']
@@ -65,20 +74,27 @@ class SerialHal():
                 except:
                     pass
                 index+=1
+            #print(self.id+':',self.position)
 
     def println(self,data):
-        if self.connection.out_waiting>1:
-            print("outbuff cap")
+        try:
+            if self.connection.out_waiting>1:
+                print("outbuff cap")
+                return
+    
+            if "p" in data:
+                pass
+                #data["p"]+=255
+            data = str(data)
+            data=data.replace(" ","")
+            data=data.replace("'","\"")
+            data = data.encode('utf-8')
+            self.connection.write(data)
+            #self.connection.flush()
+            #print(data)
+        except BaseException as e:
+            print("ERROR:",self.port, e)
             return
-        if "p" in data:
-            pass
-            #data["p"]+=255
-        data = str(data)
-        data=data.replace(" ","")
-        data=data.replace("'","\"")
-        data = data.encode('utf-8')
-        self.connection.write(data)
-        print(data)
     
     def read(self):
         while True:
@@ -87,8 +103,9 @@ class SerialHal():
                 print("inbuff cap")
                 self.connection.reset_input_buffer()
             try:
+
                 dict_json = json.loads(data)
-                #print(dict_json)
+                
                 return dict_json
             except json.JSONDecodeError as e:
                 print("JSON:", e)
