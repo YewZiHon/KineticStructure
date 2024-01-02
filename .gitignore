@@ -1,6 +1,7 @@
 /kineticEnv
 /penplotter/plotterenv
 /penplotter/temp
+/chessBot/chessenv
 # Prerequisites
 *.d
 
