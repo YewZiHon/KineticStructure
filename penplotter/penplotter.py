@@ -41,6 +41,7 @@ class plotter:
         self.root = tkinter.Tk()              
         self.root.state('zoomed')
         self.root.configure(bg='light sky blue')
+        self.imgSize=800,800
 
         self.panel = tkinter.Label()
         self.btn0=tkinter.Button(self.root)
@@ -70,14 +71,16 @@ class plotter:
         while self.state==state.takePhoto:
             
             _, self.frame = self.vs.read()
-            maxwidth, maxheight = 1600, 800
+            maxwidth, maxheight = self.root.winfo_width()-100, self.root.winfo_height()-150
             f1 = maxwidth / self.frame.shape[1]
             f2 = maxheight / self.frame.shape[0]
             f = min(f1, f2)  # resizing factor
             dim = (int(self.frame.shape[1] * f), int(self.frame.shape[0] * f))
             self.frame = cv2.resize(self.frame, dim)
+            self.imgSize=int(self.frame.shape[1] * f), int(self.frame.shape[0] * f)
 
             image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            image=cv2.flip(image, 1)
             image = Image.fromarray(image)
             image = ImageTk.PhotoImage(image)
             
@@ -109,9 +112,25 @@ class plotter:
     
     def preprocess(self):
         image=cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg")
-        image=cv2.Canny(image,1,50)
+        
+        maxwidth, maxheight = 1600,800
+        f1 = maxwidth / image.shape[1]
+        f2 = maxheight / image.shape[0]
+        f = min(f1, f2)  # resizing factor
+        dim = (int(image.shape[1] * f), int(image.shape[0] * f))
+        image = cv2.resize(image, dim)
 
-        image = image[0:800, 133:933]
+
+        center = image.shape
+        w=min(center[0],center[1])
+        x = center[1]/2 - w/2
+        y = center[0]/2 - w/2
+
+
+        image = image[int(y):int(y+w), int(x):int(x+w)]
+
+        image=cv2.Canny(image,1,50)
+    
         cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg",image)
 
         return
@@ -133,7 +152,9 @@ class plotter:
 
         image = Image.open(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")
 
-        generating = Image.fromarray(cv2.imread(sys.path[0]+"\\generating.jpg"))
+        img=cv2.imread(sys.path[0]+"\\generating.jpg")
+        img=cv2.resize(img,self.imgSize)
+        generating = Image.fromarray(img)
         generating = ImageTk.PhotoImage(generating)
         
         self.panel.configure(image=generating)
@@ -190,10 +211,13 @@ class plotter:
         gcode_compiler.append_curves(curves) 
         gcode_compiler.compile_to_file(sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode", passes=1)
 
+        i=open(sys.path[0]+"\\start.gcode",'r')
+        initgc=i.read()
+        i.close()
         with open(sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode", 'r+') as f:
             content = f.read()
             f.seek(0, 0)
-            f.write("G28\n" + '\n' + content)
+            f.write(initgc + '\n' + content)
         
 
         preview = Image.fromarray(cv2.bitwise_not(cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")))
