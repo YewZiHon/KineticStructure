@@ -131,7 +131,7 @@ class plotter:
 
         image=cv2.Canny(image,1,50)
     
-        cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg",image)
+        cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.bmp",image)
 
         return
 
@@ -150,7 +150,6 @@ class plotter:
 
         self.preprocess()
 
-        image = Image.open(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")
 
         img=cv2.imread(sys.path[0]+"\\generating.jpg")
         img=cv2.resize(img,self.imgSize)
@@ -161,55 +160,24 @@ class plotter:
         self.panel.image = generating
         self.panel.update_idletasks()
 
-        bm = potrace.Bitmap(image)
-        # bm.invert()
-        plist = bm.trace(
-            turdsize=0,
-            turnpolicy=potrace.POTRACE_TURNPOLICY_MINORITY,
-            alphamax=0.8,
-            opticurve=True,
-            opttolerance=0.1,
+        start=time.time()
+        os.startfile(
+            "\""+sys.path[0]+"\\potrace.exe\"",arguments="\""+sys.path[0]+"\\temp\\img\\"+self.filename+"canny.bmp\" "+
+            "-o\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\" --backend svg"
         )
-        with open(sys.path[0]+"\\temp\\img\\"+self.filename+".svg", "w") as fp:
-            fp.write(
-                f'''<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{image.width}" height="{image.height}" viewBox="0 0 {image.width} {image.height}">''')
-            parts = []
-            for curve in plist:
-                fs = curve.start_point
-                parts.append(f"M{fs.x},{fs.y}")
-                for segment in curve.segments:
-                    if segment.is_corner:
-                        a = segment.c
-                        b = segment.end_point
-                        parts.append(f"L{a.x},{a.y}L{b.x},{b.y}")
-                    else:
-                        a = segment.c1
-                        b = segment.c2
-                        c = segment.end_point
-                        parts.append(f"C{a.x},{a.y} {b.x},{b.y} {c.x},{c.y}")
-                parts.append("z")
-            fp.write(f'<path stroke="black" fill="none" fill-rule="evenodd" d="{"".join(parts)}"/>')
-            fp.write("</svg>")
+        time.sleep(0.5)
 
-        
-        class CustomInterface(interfaces.Gcode):
-            def __init__(self):
-                super().__init__()
-
-            # Override the laser_off method such that it also powers off the fan.
-            def laser_off(self):
-                return "G1 F10000 Z2"  # Turn off the fan + turn off the laser
-            
-            def set_laser_power(self, power):
-                return "G1 F10000 Z0"
-
-
-        gcode_compiler = Compiler(CustomInterface, movement_speed=10000, cutting_speed=3000, pass_depth=0)
-
-        curves = parse_file(sys.path[0]+"\\temp\\img\\"+self.filename+".svg") # Parse an svg file into geometric curves
-
-        gcode_compiler.append_curves(curves) 
-        gcode_compiler.compile_to_file(sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode", passes=1)
+        os.startfile(
+            "\""+sys.path[0]+"\\svg2gcode.exe\"",arguments=
+            "--circular-interpolation true --feedrate 100000 --tolerance 1 --on \"G0 Z0\" --off \"G0 Z2\" --out "+
+            "\""+sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode\" "+
+            "\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\""
+        )
+        print("\""+sys.path[0]+"\\svg2gcode.exe\"",
+            "--circular-interpolation true --feedrate 100000 --tolerance 1 --on \"G0 Z0\" --off \"G0 Z2\" --out "+
+            "\""+sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode\" "+
+            "\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\"")
+        time.sleep(0.5)
 
         i=open(sys.path[0]+"\\start.gcode",'r')
         initgc=i.read()
@@ -220,14 +188,14 @@ class plotter:
             f.write(initgc + '\n' + content)
         
 
-        preview = Image.fromarray(cv2.bitwise_not(cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.jpeg")))
+        preview = Image.fromarray(cv2.bitwise_not(cv2.imread(sys.path[0]+"\\temp\\img\\"+self.filename+"canny.bmp")))
         preview = ImageTk.PhotoImage(preview)
         
         self.panel.configure(image=preview)
         self.panel.image = preview
         self.panel.update_idletasks()
 
-
+        print("gcode",time.time()-start)
         print("Gen done")
         self.state=state.plot
         self.thread = threading.Thread(target=self.sendGcode, args=(), daemon=True)
@@ -279,6 +247,7 @@ class plotter:
 
         if ports == []:
             print("Error opening serial")
+            time.sleep(5)
             self.state=state.takePhoto
             self.startStream()
             return
@@ -295,6 +264,7 @@ class plotter:
             if self.state==state.plot:
                 #send g code
                 l=f.readline()
+                l=l.replace()
                 l = l.strip() # Strip all EOL characters for streaming
                 if  (l.isspace()==False and len(l)>0) :
                     print ('Sending:',  l)
