@@ -9,12 +9,10 @@ import cv2
 import os
 import sys
 import enum
-import potrace
-from svg_to_gcode.svg_parser import parse_file
-from svg_to_gcode.compiler import Compiler, interfaces
 import time
 import serial
 import glob
+from rembg import remove
 
 
 state = enum.Enum('state', ['takePhoto', 'previewPhoto', 'gen', 'plot', 'paused'])
@@ -96,6 +94,7 @@ class plotter:
         self.filename = datetime.datetime.now().strftime("%dd%mm%Yy-%Hh%Mn%Ss")
         # save the file
         print("saving",sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg")
+        
         print(cv2.imwrite(sys.path[0]+"\\temp\\img\\"+self.filename+".jpeg", self.frame))
         self.state=state.previewPhoto
         self.btn0.pack_forget()
@@ -120,7 +119,6 @@ class plotter:
         dim = (int(image.shape[1] * f), int(image.shape[0] * f))
         image = cv2.resize(image, dim)
 
-
         center = image.shape
         w=min(center[0],center[1])
         x = center[1]/2 - w/2
@@ -128,6 +126,8 @@ class plotter:
 
 
         image = image[int(y):int(y+w), int(x):int(x+w)]
+
+        image=remove(image)
 
         image=cv2.Canny(image,1,50)
     
@@ -163,8 +163,10 @@ class plotter:
         start=time.time()
         os.startfile(
             "\""+sys.path[0]+"\\potrace.exe\"",arguments="\""+sys.path[0]+"\\temp\\img\\"+self.filename+"canny.bmp\" "+
-            "-o\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\" --backend svg"
+            "-o\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\" --backend svg --width 800pt --height 800pt --opttolerance 0.4 "
         )
+        while not os.path.exists(sys.path[0]+"\\temp\\img\\"+self.filename+".svg"):
+            pass
         time.sleep(0.5)
 
         os.startfile(
@@ -173,10 +175,8 @@ class plotter:
             "\""+sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode\" "+
             "\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\""
         )
-        print("\""+sys.path[0]+"\\svg2gcode.exe\"",
-            "--circular-interpolation true --feedrate 100000 --tolerance 1 --on \"G0 Z0\" --off \"G0 Z2\" --out "+
-            "\""+sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode\" "+
-            "\""+sys.path[0]+"\\temp\\img\\"+self.filename+".svg\"")
+        while not os.path.exists(sys.path[0]+"\\temp\\gcode\\"+self.filename+".gcode"):
+            pass
         time.sleep(0.5)
 
         i=open(sys.path[0]+"\\start.gcode",'r')
