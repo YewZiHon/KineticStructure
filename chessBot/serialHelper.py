@@ -2,6 +2,7 @@ import serial
 import sys
 import glob
 import time
+import threading
 
 def serial_ports():
     """ Lists serial port names
@@ -35,6 +36,7 @@ def serial_ports():
 def init():
     #get ports
     ports = serial_ports()
+    serHandel=[None,None]#tc1, board
     #find ports
     for port in ports:
         #attempt to open port
@@ -53,16 +55,69 @@ def init():
             data=data.decode("utf-8")
             if "TC1" in data:
                 print("TC1", port)
+                if serHandel[0]:
+                    raise Exception("multiple printers???")
+                serHandel[0]=ser
                 break
             elif len(data)==65:#64+\n
                 print("board",port)
+                if serHandel[1]:
+                    raise Exception("multiple boards???")
+                serHandel[1]=ser
                 break
             else:
                 print("data",data,port)
                 tries+=1
+    return serHandel
+
+class printerHandle():
+    def __init__(self, portHandle):
+        self.ser = portHandle
+        self.ser.write(b"G28\n")
+    
+    def goto(self,x=None, y=None, z=None):
+
+        #move to nowhere
+        if x==None and y==None and z==None:
+            return
+        
+        data = "G0 F100000 "
+
+        if x!=None:
+            data+="X"
+            data+=str(x)
+        
+        if y!=None:
+            data+="Y"
+            data+=str(y)
+
+        if z!=None:
+            data+="Z"
+            data+=str(z)
+
+        self.ser.write(data)
+        
+class boardHandle():
+    def __init__(self, portHandle):
+        self.ser = portHandle
+        self.states="0"*64
+        self.thread = threading.Thread(target = self.boardLoop)
+        self.thread.start()
+
+    def boardLoop(self):
+        while True:
+            data = self.ser.readline()
+            if data != "":
+                self.states = data[0:64]
+
 
 
 
 
 if __name__ =="__main__":
-    init()
+    tc1,board = init()
+    if not tc1 or not board:
+        raise Exception("Not connected: (tc1, board)",tc1,board)
+    tc1 = printerHandle(tc1)
+    board = boardHandle(board)
+
