@@ -1,25 +1,16 @@
+import serialHelper
 import chess
-import chess.svg
-import time
-import sys
+import stockfish
 
-import tkinter as tk
-import tksvg
+class chessbot():
+    def __init__(self):
+        self.board = chess.Board()
 
-window = tk.Tk()
 
-board = chess.Board()
-
-svgstr = chess.svg.board(
-    board,
-    size=400)
-
-svg_image = tksvg.SvgImage( data = svgstr )
-
-# You can also resize the image, but using only one of the three available parameters:
-# svg_image = tksvg.SvgImage( data = d, scale = 0.5 )
-# svg_image = tksvg.SvgImage( data = d, scaletowidth = 200 )
-#svg_image = tksvg.SvgImage( data = d, scaletoheight = 200 )
-
-tk.Label( image = svg_image ).pack()
-window.mainloop()
+if __name__ =="__main__":
+    
+    tc1,board = serialHelper.init()
+    if not tc1 or not board:
+        raise Exception("Not connected: (tc1, board)",tc1,board)
+    tc1 = serialHelper.printerHandle(tc1)
+    board = serialHelper.boardHandle(board)

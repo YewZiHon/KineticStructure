@@ -101,7 +101,7 @@ class boardHandle():
     def __init__(self, portHandle):
         self.ser = portHandle
         self.states="0"*64
-        self.thread = threading.Thread(target = self.boardLoop)
+        self.thread = threading.Thread(target = self.boardLoop, daemon=True)
         self.thread.start()
 
     def boardLoop(self):
@@ -109,8 +109,6 @@ class boardHandle():
             data = self.ser.readline()
             if data != "":
                 self.states = data[0:64]
-
-
 
 
 
