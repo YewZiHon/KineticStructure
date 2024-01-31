@@ -1,15 +1,14 @@
 #include "ArduinoJson.h"
 
-
 volatile int32_t position[12]={0,0,0,0,0,0,0,0,0,0,0,0};
 
-#define _1
+#define _0
 
 #ifdef _0
 const uint8_t clk[12]={0,1,2,3,4,5,6,7,8,9,10,11};
 const uint8_t dat[12]={12,13,14,15,16,17,18,19,20,21,22,26};
 
-#elif defined(_1)
+#elif defined(_1) || defined(_2) || defined(_3) || defined(_4) || defined(_5) || defined(_6) || defined(_7) || defined(_8) || defined(_9)
 const uint8_t clk[12]={0,2,4,6,8,10,12,14,16,18,20,22};
 const uint8_t dat[12]={1,3,5,7,9,11,13,15,17,19,21,26};
 #endif
@@ -131,6 +130,32 @@ uint32_t stepcounter = 0;
     }
   }
 
+void returnID(){
+  #ifdef _0
+        deserializeJson(doc, "{\"i\":\"E0\"}");
+        #elif defined(_1)
+        deserializeJson(doc, "{\"i\":\"E1\"}");
+        #elif defined(_2)
+        deserializeJson(doc, "{\"i\":\"E2\"}");
+        #elif defined(_3)
+        deserializeJson(doc, "{\"i\":\"E3\"}");
+        #elif defined(_4)
+        deserializeJson(doc, "{\"i\":\"E4\"}");
+        #elif defined(_5)
+        deserializeJson(doc, "{\"i\":\"E5\"}");
+        #elif defined(_6)
+        deserializeJson(doc, "{\"i\":\"E6\"}");
+        #elif defined(_7)
+        deserializeJson(doc, "{\"i\":\"E7\"}");
+        #elif defined(_8)
+        deserializeJson(doc, "{\"i\":\"E8\"}");
+        #elif defined(_9)
+        deserializeJson(doc, "{\"i\":\"E9\"}");
+        #endif
+        serializeJson(doc, Serial);
+        Serial.print('\n');
+}
+
 
 void setup() {
 
@@ -142,7 +167,10 @@ void setup() {
     pinMode(dat[i],INPUT_PULLDOWN);
   }
 // setup interrupts
+  pinMode(25,OUTPUT);
+  digitalWrite(25,1);
   while(!Serial);
+  pinMode(25,INPUT);
   attachInterrupt(clk[0], f0, RISING);
   attachInterrupt(clk[1], f1, RISING);
   attachInterrupt(clk[2], f2, RISING);
@@ -158,59 +186,40 @@ void setup() {
 
 
 //other stuff
-  //Serial.println("initDone");
-  while(1){
-    if (Serial.available()){
-      deserializeJson(doc, Serial);
-      if (doc.containsKey("i")){
-        #ifdef _0
-        deserializeJson(doc, "{\"i\":\"E0\"}");
-        #elif defined(_1)
-        deserializeJson(doc, "{\"i\":\"E1\"}");
-        #endif
-        serializeJson(doc, Serial);
-        Serial.print('\n');
-        break;
-      }
-    }
-  }
 }
 
 void loop() {
   if (Serial.available()){
     deserializeJson(doc, Serial);
     if (doc.containsKey("i")){
-        #ifdef _0
-        deserializeJson(doc, "{\"i\":\"E0\"}");
-        #elif defined(_1)
-        deserializeJson(doc, "{\"i\":\"E1\"}");
-        #endif
-        serializeJson(doc, Serial);
-        Serial.print('\n');
+        returnID();
       }
-    if (doc.containsKey("r")){
+    else if (doc.containsKey("r")){
       for(uint8_t i =0; i<12;i++){
         position[i]=0;
       }
     }
+    else{
+      doc.clear();
+      doc.garbageCollect();
+      doc["0"]=position[0];
+      doc["1"]=position[1];
+      doc["2"]=position[2];
+      doc["3"]=position[3];
+      doc["4"]=position[4];
+      doc["5"]=position[5];
+      doc["6"]=position[6];
+      doc["7"]=position[7];
+      doc["8"]=position[8];
+      doc["9"]=position[9];
+      doc["A"]=position[10];
+      doc["B"]=position[11];
+      serializeJson(doc, Serial);
+      Serial.print('\n');
+    }
   }
-  doc.clear();
-  doc.garbageCollect();
-  doc["0"]=position[0];
-  doc["1"]=position[1];
-  doc["2"]=position[2];
-  doc["3"]=position[3];
-  doc["4"]=position[4];
-  doc["5"]=position[5];
-  doc["6"]=position[6];
-  doc["7"]=position[7];
-  doc["8"]=position[8];
-  doc["9"]=position[9];
-  doc["A"]=position[10];
-  doc["B"]=position[11];
-  serializeJson(doc, Serial);
-  Serial.print('\n');
-  delay(50);
+  
+  
 
   if (!Serial){
     rp2040.reboot();
