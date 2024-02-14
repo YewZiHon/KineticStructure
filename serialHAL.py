@@ -4,6 +4,7 @@ import sys
 import glob
 import time
 import threading
+import constants
 
 def serial_ports():
     if sys.platform.startswith('win'):
@@ -27,41 +28,57 @@ def serial_ports():
     return result
 
 class SerialHal():
+    """
+    __init__()
+    @param, connection port
+    attempt to connect
+
+    datareader()
+    loop only rinning if encoder
+
+    println()
+    print to serial device
+
+    read()
+    read one line of data
+    """
     
-    def __init__(self, connectionport):
+    def __init__(self, id):
         #vars
         self.readBuffer=[]
         self.sendBufffer=[]
-        self.id=""
+        self.id=id
         self.connection=None
-        self.mode=""
-        self.add=-1
+        self.mode=id[0]
+        self.add=int(id[1])
         self.position=[0,0,0,0,0,0,0,0,0,0,0,0]
         self.threadHandle=None
         self.port=""
 
-        #start connection
-        self.connection = serial.Serial(port=connectionport, baudrate=115200,parity=serial.PARITY_NONE)
-        time.sleep(1)
-        self.connection.reset_input_buffer()
-        self.port=connectionport
+    def attach(self, connectionport):
+        if self.connection:
+            print("Conflicting connection!!!",connectionport)
+            return
+        print("attach", self.id)
+        try:
+            #start connection
+            self.connection = serial.Serial(port=connectionport, baudrate=115200,parity=serial.PARITY_NONE)
+            time.sleep(1)
+            self.connection.reset_input_buffer()
+            self.port=connectionport
 
-        #get identity
-        self.println('{"i":0}')
-        identity = self.read()
-        if 'i' in identity:
-            identity = identity['i']
-        else: 
-            print("-",identity,"-")
-        self.id=identity
-        self.mode=identity[0]
-        self.add=int(identity[1:])
-
-        #start reading thread if encoder
-        if self.mode =='E':
-            self.threadHandle = threading.Thread(target=self.dataReader, args=(),daemon=True)
-            self.threadHandle.start()
-        print(connectionport,"done")
+            #start reading thread if encoder
+            if self.mode =='E':
+                self.threadHandle = threading.Thread(target=self.dataReader, args=(),daemon=True)
+                self.threadHandle.start()
+            print(connectionport,"done")
+        except Exception as e:
+            print(e)
+            try:
+                self.connection.close()
+            except:
+                pass
+            self.connection=None
 
     def dataReader(self):
         expected=['0','1','2','3','4','5','6','7','8','9','A','B']
@@ -94,18 +111,80 @@ class SerialHal():
             #print(data)
         except BaseException as e:
             print("ERROR:",self.port, e)
-            return
+            try:
+                self.connection.close()
+            except:
+                pass
+            self.connection=None
     
     def read(self):
         while True:
-            data = self.connection.readline().decode("utf-8")
-            if self.connection.in_waiting>1:
-                print("inbuff cap")
-                self.connection.reset_input_buffer()
             try:
+                data = self.connection.readline().decode("utf-8")
+                if self.connection.in_waiting>1:
+                    print("inbuff cap")
+                    self.connection.reset_input_buffer()
+                try:
 
-                dict_json = json.loads(data)
-                
-                return dict_json
-            except json.JSONDecodeError as e:
-                print("JSON:", e)
+                    dict_json = json.loads(data)
+                    
+                    return dict_json
+                except json.JSONDecodeError as e:
+                    print("JSON:", e)
+            except:
+                try:
+                    self.connection.close()
+                except:
+                    pass
+                self.connection=None
+
+
+class serialConnector():
+    def __init__(self, pointer):
+        self.pointer=pointer
+
+        #start encoder handles
+        for i in range(constants.ENCODER_DRIVER_COUNT):
+            self.pointer.encoders[i]=SerialHal("E"+str(i))
+        #start motor handles
+        for i in range(constants.MOTOR_DRIVER_COUNT):
+            self.pointer.motors[i]=SerialHal("M"+str(i))
+
+        threadHandle = threading.Thread(target=self.connectorLoop, args=(),daemon=True)
+        threadHandle.start()
+
+    def connectorLoop(self):
+        
+        while True:
+            try:
+                ports = serial_ports()
+                if not ports:
+                    continue
+                for port in ports:
+                    try:
+                        connection = serial.Serial(port=port, baudrate=115200,parity=serial.PARITY_NONE, timeout=1)
+                        time.sleep(1)
+                        connection.reset_input_buffer()
+
+                        #get identity
+                        connection.write(bytearray('{"i":0}',"utf-8"))
+                        identity = connection.readline().decode("utf-8")
+                        identity=json.loads(identity)
+                        identity=identity['i']
+                        #print(identity)
+                        
+                        mode=identity[0]
+                        add=int(identity[1])
+                        connection.close()
+                        if mode=="E":
+                            self.pointer.encoders[add].attach(port)
+                            #print("attach ", identity)
+                        elif mode=="M":
+                            self.pointer.motors[add].attach(port)
+                            #print("attach ", identity)
+                    except Exception as e:
+                        print(e)
+
+            except Exception as e:
+                print(e)
+                    

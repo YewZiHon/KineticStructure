@@ -218,11 +218,5 @@ void loop() {
       Serial.print('\n');
     }
   }
-  
-  
-
-  if (!Serial){
-    rp2040.reboot();
-  }
 
 }
