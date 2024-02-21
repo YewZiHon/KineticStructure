@@ -1,4 +1,3 @@
-
 import flask
 import serial
 import threading
@@ -84,6 +83,31 @@ def returnData():
 
     return returnString
 
+@app.route("/ledOn")
+def ledOn():
+    ser.serial.write(b'A')
+    return ('', 204)
 
+@app.route("/ledOff")
+def ledOff():
+    ser.serial.write(b'B')
+    return ('', 204)
 
-app.run(debug=1,port=80)
+@app.route("/waterOn")
+def watOn():
+    ser.serial.write(b'C')
+    return ('', 204)
+
+@app.route("/waterOff")
+def WatOff():
+    ser.serial.write(b'D')
+    return ('', 204)
+
+app.run(debug=0,port=80)
+
+"""
+   http://127.0.0.1/waterOn
+http://127.0.0.1/waterOff
+http://127.0.0.1/ledOn
+http://127.0.0.1/ledOff
+"""
