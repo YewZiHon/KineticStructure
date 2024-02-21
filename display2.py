@@ -9,6 +9,7 @@ class display2():
         self.encoders=[]
         self.motors=[]
         self.cells=[]
+        self.text=[]
         row=12
         col=10
 
@@ -25,11 +26,14 @@ class display2():
             
         for cell_no in range(row*col):
             newCanvas = tk.Canvas(self.root, width=120, height=60, bg="Grey38")
+            text = newCanvas.create_text(60,30, text=str(cell_no), fill="black", font=('Helvetica 8 bold'))
             self.cells.append(newCanvas)
+            self.text.append(text)
             self.cells[cell_no].grid(column = (cell_no%row),row = (cell_no//row)+2)
         
         self.root.after(500,self.updator)
         self.root.mainloop()
+
     def updator(self):
         #update encoder states
         for i in range(constants.ENCODER_DRIVER_COUNT):
@@ -43,6 +47,15 @@ class display2():
                 self.motors[i].configure(bg="purple")
             else:
                 self.motors[i].configure(bg="MediumOrchid1")
+        
+        for i in range(constants.MOTOR_COUNT):
+            id=self.pointer.pidControllers[i].id
+            pos=self.pointer.pidControllers[i].position
+            tgt=self.pointer.pidControllers[i].target
+            pwr=self.pointer.pidControllers[i].power
+            data=str(pos)+" "+str(id)+"\n"+str(tgt)+" "+str(pwr)
+            self.cells[i].itemconfig(self.text[i], text=data)
+
 
         self.root.after(500,self.updator)
                 

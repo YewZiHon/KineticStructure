@@ -93,6 +93,9 @@ class SerialHal():
                 index+=1
             #print(self.id+':',self.position)
 
+    def writeData(self,id,pwr):
+        self.println(json.dumps({"M":id,"P":pwr}))
+
     def println(self,data):
         try:
             if self.connection.out_waiting>1:
@@ -111,11 +114,6 @@ class SerialHal():
             #print(data)
         except BaseException as e:
             print("ERROR:",self.port, e)
-            try:
-                self.connection.close()
-            except:
-                pass
-            self.connection=None
     
     def read(self):
         while True:

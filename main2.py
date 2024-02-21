@@ -1,7 +1,7 @@
 import serialHAL
 import display2
 import constants
-import pidController2
+import pidController
 
 class Pointer():
     def __init__(self):
@@ -12,5 +12,5 @@ class Pointer():
 pointer=Pointer()
 
 serialHAL.serialConnector(pointer)
-pidController2.controllerStart(pointer)
+pidController.controllerStart(pointer)
 display2.display2(pointer)
