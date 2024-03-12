@@ -51,8 +51,10 @@ class display2():
         for i in range(constants.MOTOR_COUNT):
             id=self.pointer.pidControllers[i].id
             pos=self.pointer.pidControllers[i].position
-            tgt=self.pointer.pidControllers[i].target
+            tgt=self.pointer.pidControllers[i].pid.setpoint
             pwr=self.pointer.pidControllers[i].power
+            if i==0:
+                print(pos)
             data=str(pos)+" "+str(id)+"\n"+str(tgt)+" "+str(pwr)
             self.cells[i].itemconfig(self.text[i], text=data)
 

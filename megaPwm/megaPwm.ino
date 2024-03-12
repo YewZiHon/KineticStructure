@@ -1,12 +1,9 @@
 #include <ArduinoJson.h>
-#include <digitalWriteFast.h>
 
 const uint8_t outputs[2][24]={
   {12,10,8,6,4,22,24,26,28,30,32,34 , A0,A2,58,A6,A8,A10,A12,A14,52,50,48,46},
   {11,9, 7,5,3,23,25,27,29,31,33,35 , A1,57,A5,A7,A9,A11,A13,A15,53,51,49,47}
 };
-
-#define MAXPWM 255
 
 volatile int16_t power[24]={
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -17,6 +14,8 @@ uint16_t pwmPhaseCount=0;
 
 StaticJsonDocument<128> doc;
 char input[64];
+char encoderInput0[64];
+char encoderInput1[64];
 uint8_t inputState=0;
 uint32_t time=0;
 
@@ -32,6 +31,10 @@ void setup(){
 
   pinMode(13,OUTPUT);
   
+}
+
+void readEncoder(HardwareSerial encoderSerial, &char buffer, &int32_t result){
+
 }
 
 void loop(){
@@ -81,38 +84,13 @@ void loop(){
   }
   //Serial ENd
 
- 
-  //PWM reset BLOCK //if not reset 8us, if reset 246ms #improved=16us if reset
-  pwmPhaseCount++;
-  if (pwmPhaseCount>=MAXPWM){
-    pwmPhaseCount=0;
-    PORTA=0;
-    PORTB&=128;
-    PORTC=0;
-    PORTD=0;
-    PORTE&=3;
-    PORTF=0;
-    PORTG=0;
-    PORTH=0;
-    PORTJ=0;
-    PORTJ=0;
-    
-    
-  }
-  
-  //start setting block 76 wo setting, 184 with setting, //new 92-128
-  
-  for(uint8_t j=0; j<24;j++){
-    if (power[j]!=0){
-      if (power[j]<0 && (power[j]*-1)==pwmPhaseCount){
-        digitalWrite(outputs[0][j],1);      
+  //read encoder1
+  //read encoder2
 
-      }
-      if (power[j]>0 && power[j]==pwmPhaseCount){
-        digitalWrite(outputs[1][j],1);
-      }
-    }
-  }
+  //pid
+
+
+  
 }
 /*
 {"m":0,"p":255}{"m":1,"p":255}{"m":2,"p":255}{"m":3,"p":255}{"m":4,"p":255}{"m":5,"p":255}{"m":6,"p":255}{"m":7,"p":255}{"m":8,"p":255}{"m":9,"p":255}{"m":10,"p":255}{"m":11,"p":255}{"m":12,"p":255}{"m":13,"p":255}{"m":14,"p":255}{"m":15,"p":255}{"m":16,"p":255}{"m":17,"p":255}{"m":18,"p":255}{"m":19,"p":255}{"m":20,"p":255}

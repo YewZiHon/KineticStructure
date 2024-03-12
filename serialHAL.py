@@ -54,6 +54,8 @@ class SerialHal():
         self.position=[0,0,0,0,0,0,0,0,0,0,0,0]
         self.threadHandle=None
         self.port=""
+        self.target=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        self.lastWrite=time.time()
 
     def attach(self, connectionport):
         if self.connection:
@@ -69,38 +71,48 @@ class SerialHal():
 
             #start reading thread if encoder
             if self.mode =='E':
+                print("start reader")
                 self.threadHandle = threading.Thread(target=self.dataReader, args=(),daemon=True)
                 self.threadHandle.start()
             print(connectionport,"done")
         except Exception as e:
-            print(e)
+            print("serhal attatchError",e)
+            self.connection=None
             try:
                 self.connection.close()
             except:
                 pass
-            self.connection=None
+            
 
     def dataReader(self):
         expected=['0','1','2','3','4','5','6','7','8','9','A','B']
         while True:
             index=0
+            data = "{}".encode('utf-8')
+            self.connection.write(data)
             newdata = self.read()
             for i in expected:
                 try:
                     self.position[index]=newdata[i]
                 except:
                     pass
+                if i=='0':
+                    print(self.position[0])
                 index+=1
             #print(self.id+':',self.position)
 
     def writeData(self,id,pwr):
-        self.println(json.dumps({"M":id,"P":pwr}))
+        if self.target[id]!=pwr or time.time()-self.lastWrite>1:
+            if self.println(json.dumps({"M":id,"P":pwr})):#if tx success
+                self.target[id]=pwr
+                self.lastWrite=time.time()
 
     def println(self,data):
+        #print(data)
         try:
             if self.connection.out_waiting>1:
                 print("outbuff cap")
-                return
+                return False
     
             if "p" in data:
                 pass
@@ -111,12 +123,27 @@ class SerialHal():
             data = data.encode('utf-8')
             self.connection.write(data)
             #self.connection.flush()
+            return True
+
+
             #print(data)
+        except serial.SerialTimeoutException:
+            return False
+
         except BaseException as e:
-            print("ERROR:",self.port, e)
+            print("serhal print ERROR:",self.port, e)
+            self.connection=None
+            try:
+                self.connection.close()
+            except:
+                pass
+            return False
+                
     
     def read(self):
         while True:
+            if self.connection==None:
+                return
             try:
                 data = self.connection.readline().decode("utf-8")
                 if self.connection.in_waiting>1:
@@ -128,13 +155,15 @@ class SerialHal():
                     
                     return dict_json
                 except json.JSONDecodeError as e:
-                    print("JSON:", e)
-            except:
+                    pass
+            except BaseException as e:
+                print("serhal read ERROR:",self.port, e)
+                self.connection=None
                 try:
                     self.connection.close()
-                except:
+                except BaseException as e:
                     pass
-                self.connection=None
+                
 
 
 class serialConnector():
@@ -161,13 +190,16 @@ class serialConnector():
                 for port in ports:
                     try:
                         connection = serial.Serial(port=port, baudrate=115200,parity=serial.PARITY_NONE, timeout=1)
-                        time.sleep(1)
                         connection.reset_input_buffer()
-
+                        time.sleep(2)
                         #get identity
                         connection.write(bytearray('{"i":0}',"utf-8"))
                         identity = connection.readline().decode("utf-8")
+                        if identity=="":
+                            identity = connection.readline().decode("utf-8")
+                        print(1,"-"+identity+"-")
                         identity=json.loads(identity)
+                        print(2)
                         identity=identity['i']
                         #print(identity)
                         
@@ -181,8 +213,8 @@ class serialConnector():
                             self.pointer.motors[add].attach(port)
                             #print("attach ", identity)
                     except Exception as e:
-                        print(e)
+                        print("serialConnector attatch ERROR:", e)
 
             except Exception as e:
-                print(e)
+                print("serialConnector search ERROR:", e)
                     
